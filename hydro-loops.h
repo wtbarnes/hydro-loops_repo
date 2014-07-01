@@ -10,12 +10,12 @@
 #include <float.h>
 
 //Declare some global variables
-extern double RSOL;
-extern double GSOL;
-extern double KB;
-extern double KAPPA;
-extern double MP;
-extern double MU;
-extern double PI;
+double RSOL;
+double GSOL;
+double KB;
+double KAPPA_0;
+double MP;
+double MU;
+double PI;
 
 #endif
