@@ -1,0 +1,4 @@
+# ignore object files
+hydro-loops*.o
+# ignore executable
+hydro-loops
