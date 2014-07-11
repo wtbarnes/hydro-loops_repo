@@ -120,12 +120,16 @@ int main(int argc, char *argv[])
 				//Increment the counter
 				res_count += 1;
 				
+				//Clear the hydroloops_st structure and all of its members. It will be malloc'd on the
+				//next iteration.
+				
 				//Break out of the loop 
 				break;
 			}
-			else if(fabs(f_test) > f_thresh)
+			else if(fabs(f_test) < f_thresh)
 			{
 				//If this condition, we break and then force the while loop to exit
+				//The desired boundary condition has been met to within the set tolerance
 				break;
 			}
 			

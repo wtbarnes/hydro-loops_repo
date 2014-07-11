@@ -17,7 +17,7 @@ double * hydroloops_linspace( double a, double b, double n)
 	return linspace;
 }
 
-struct hydroloops_st *hydroloops_fconverge(double Eh, struct Options inputs)
+struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 {
 	/****Declare variables****/
 	//Double
@@ -30,7 +30,9 @@ struct hydroloops_st *hydroloops_fconverge(double Eh, struct Options inputs)
 	double n;
 	double P;
 	double delta_s;
+	double dF,dT,dP;
 	double lambda;
+	double Eh;
 	
 	//Int
 	int i;
@@ -77,6 +79,13 @@ struct hydroloops_st *hydroloops_fconverge(double Eh, struct Options inputs)
 	/****Compute Parameters over Loop Half-Length****/
 	for(i = 1; i < inputs.N; i++)
 	{
+		//Check if temperature is less than zero
+		if(T < 0)
+		{
+			printf("Temperature less than zero. Breaking the loop\n");
+			printf("Flux: F = %f\n",F);
+			break;
+		}
 		//Calculate some inital loop coordinates
 		s += delta_s;
 		r = RSOL + 2*inputs.L/PI*sin(PI*s/(2.*inputs.L));
@@ -86,8 +95,38 @@ struct hydroloops_st *hydroloops_fconverge(double Eh, struct Options inputs)
 		//Calculate the radiative loss function
 		lambda = hydroloops_rad_loss(T,inputs);
 		
+		//Calculate the heating
+		Eh = hydroloops_heating(s,Eh0,inputs);
 		
+		//Step through F,T,P and n parameters using energy and momentum equations
+		dF = (Eh - pow(n,2)*lambda)*delta_s;
+		dT = F/(-KAPPA_O*pow(T,5./2.))*delta_s;
+		dP = -MU*MP*n*g*delta_s;
+		
+		//Update all of the parameters
+		F = dF + F;
+		T = dT + T;
+		P = dP + P;
+		n = P/(2.*K_B*T);
+		
+		//Save updated parameters to data structure
+		loop_params->s[i] = s;
+		loop_params->r[i] = r;
+		loop_params->g[i] = g;
+		loop_params->h[i] = h;
+		loop_params->F[i] = F;
+		loop_params->T[i] = T;
+		loop_params->n[i] = n;
+		loop_params->P[i] = P;
 	}
+	
+	//Display some results
+	printf("******************************************\n");
+	printf("Using heating rate E_H = %f\n",Eh0);
+	printf("BC: F(s=L) = %f\n",F);
+	printf("T(s=L) = %f MK\n",T/1e+6);
+	printf("n(s=L) = %f (10^8)\n",n/1e+8);
+	printf("******************************************\n");
 	
 	//Return structure containing plasma properties
 	return loop_params;
@@ -121,5 +160,86 @@ double hydroloops_heating(double s,double Eh0,struct Options inputs)
 
 double hydroloops_rad_loss(double T, struct Options inputs)
 {
+	//Declare some variables
+	double alpha;
+	double chi;
+	double logT;
+	double lambda;
+	
+	//Take log of temperature
+	logT = log10(T);
+	
+	//Decide on full or simplified loss function
+	if(inputs.rad_key == 0)
+	{
+		//Simplified radiative loss function
+		if(logT <= 4.97)
+		{
+			alpha = 2.0;
+			chi = 1.09e-31;
+		}
+		else
+		{
+			alpha = 0.5;
+			chi = 2.19e-19;
+		}
+	}
+	else if(inputs.rad_key == 1)
+	{
+		//Full radiative loss function
+		if(logT >= 7.63)
+		{
+			alpha = 0.5;
+			chi = 1.96e-27;
+		}
+		else if(logT >= 6.90)
+		{
+			alpha = -1.0;
+			chi = 5.49e-16;
+		}
+		else if(logT >= 6.55)
+		{
+			alpha = 1./3.;
+			chi = 3.46e-25;
+		}
+		else if(logT >= 6.18)
+		{
+			alpha = -1.5;
+			chi = 3.53e-13;
+		}
+		else if(logT >= 5.67)
+		{
+			alpha = 0.;
+			chi = 1.90e-22;
+		}
+		else if(logT >= 4.97)
+		{
+			alpha = -1.0;
+			chi = 8.87e-17;
+		}
+		else
+		{
+			alpha = 2.0;
+			chi = 1.09e-31;
+		}
+	}
+	else
+	{
+		printf("Invalid input for radiative loss function. Exiting program.\n");
+		exit(1);
+	}
+	
+	//Calculate lambda
+	lambda = chi*pow(T,alpha);
+	
+	return lambda;
+}
+
+
+void hydroloops_struct_free(struct hydroloops_st *loop_param)
+{
+	//Free all structure members
+	
+	//First check that the pointer structure is valid	
 	
 }
