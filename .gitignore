@@ -2,3 +2,10 @@
 hydro-loops*.o
 # ignore executable
 hydro-loops
+# ignore data folder
+data
+# ignore matlab files
+*.m
+# ignore IDL procedures
+*.pro
+

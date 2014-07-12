@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
 	KAPPA_0 = 1e-6;		//Spitzer coefficient for thermal conduction
 	MP = 1.67e-24;		//proton mass in g
 	MU = 1.;			
+	MI = MU*MP;
 	PI = M_PI;
 	
 	/****Declare variables****/
@@ -19,6 +20,7 @@ int main(int argc, char *argv[])
 	double Emax;
 	double T0;
 	double n0;
+	double h0;
 	double f_thresh;
 	double f_test;
 	double Eh;
@@ -55,7 +57,9 @@ int main(int argc, char *argv[])
 	else
 	{
 		L = atof(argv[1]);			//Read in loop half-length
+		L = 1e+8*L;					//Convert from Mm to cm
 		Sh = atof(argv[2]);			//Read in heating scale height
+		Sh = 1e+8*Sh;				//Convert from Mm to cm
 	}
 	
 	//Read in parameters from input file
@@ -67,11 +71,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh);
-	
-	//DEBUG--print the parameters read-in from the file
-	printf("Print the input parameters as a test\n");
-	printf("%d\t%d\t%d\t%le\t%le\t%le\t%le\t%le\n",N,heat_key,rad_key,Emin,Emax,T0,n0,f_thresh);
+	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n%le\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh);
 	
 	//Add necessary inputs to input structure
 	inputs.L = L;
@@ -82,6 +82,9 @@ int main(int argc, char *argv[])
 	inputs.T0 = T0;
 	inputs.n0 = n0;
 	inputs.h0 = h0;
+	
+	/****Print header to standard output****/
+	hydroloops_print_header(inputs);
 	
 	/****Convergence on flux boundary condition****/
 	//Set f_test to start while loop
@@ -98,7 +101,7 @@ int main(int argc, char *argv[])
 			Eh = *(Eh_ptr + i);
 			
 			//Print the current heating rate
-			fprintf("Using heating rate %le\n",Eh);
+			printf("Using heating rate %le\n",Eh);
 			
 			//Call the flux convergence function 
 			loop_params = hydroloops_fconverge(Eh,inputs);
@@ -108,20 +111,32 @@ int main(int argc, char *argv[])
 			
 			//Check the value of f_test to see if it has passed zero(+ threshold flux)
 			//(add in a check for complex numbers)
-			if(f_test > f_thresh)
+			if(res_count > res_thresh)
 			{
+				//Make sure we have not exceeded the maximum number of resets
+				//If we have, break the for loop so the while loop can be broken
+				break;
+				
+			}
+			else if(f_test > f_thresh)
+			{
+				
 				//Reset the heating array
-				free(Eh_ptr);
-				Eh_ptr = NULL;
 				Emax = Eh;
 				Emin = *(Eh_ptr + (i-1));
+				free(Eh_ptr);
+				Eh_ptr = NULL;
 				Eh_ptr = hydroloops_linspace(Emin,Emax,Eh_length);
+				
+				//DEBUG
+				printf("Reset the heating array\n");
 				
 				//Increment the counter
 				res_count += 1;
 				
 				//Clear the hydroloops_st structure and all of its members. It will be malloc'd on the
 				//next iteration.
+				hydroloops_free_struct(loop_params);
 				
 				//Break out of the loop 
 				break;
@@ -135,6 +150,7 @@ int main(int argc, char *argv[])
 			
 			//Clear the hydroloops_st structure and all of its members. It will be malloc'd 
 			//on the next iteration.
+			hydroloops_free_struct(loop_params);
 		}
 		
 	}
@@ -144,15 +160,19 @@ int main(int argc, char *argv[])
 	{
 		printf("Unable to converge on desired boundary conditions.\n");
 		printf("F(s=L) = %f, Eh = %f for L = %f, Sh = %f\n",*(loop_params->F + (N-1)),Eh,L,Sh);
-		pinttf("Trying increasing the grid size or refining the heating array.\n");
+		printf("Trying increasing the grid size or refining the heating array.\n");
 	}
 	else
 	{
 		//Print the data to a file
+		hydroloops_print_data(loop_params,inputs);
 	}
 	
 	//Clear the memory of the hydroloops structure
-	
+	hydroloops_free_struct(loop_params);
+	//Clear the memory of the heating pointer
+	free(Eh_ptr);
+	Eh_ptr = NULL;
 	
 	//Exit with no errors
 	return 0;
