@@ -16,8 +16,8 @@ double RSOL;
 double GSOL;
 double KB;
 double KAPPA_0;
-double MP;
 double MU;
+double Z_AVG;
 double MI;
 double PI;
 
@@ -43,6 +43,8 @@ struct hydroloops_st {
 	double *r;
 	double *g;
 	double *h;
+	double c2;
+	double c3;
 	
 };
 
@@ -60,5 +62,9 @@ void hydroloops_free_struct(struct hydroloops_st *);
 void hydroloops_print_data(struct hydroloops_st *,struct Options);
 
 void hydroloops_print_header(struct Options);
+
+void hydroloops_calc_abundance(char *);
+
+double hydroloops_avg_val(double[], int);
 
 #endif

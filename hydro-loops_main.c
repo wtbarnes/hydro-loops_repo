@@ -5,11 +5,6 @@ int main(int argc, char *argv[])
 	//Define global variables
 	RSOL = 6.9550e+10; 	//Radius of the Sun in cm 
 	GSOL = 27395.;		//Gravitational acceleration at the solar surface
-	KB = 1.38e-16;		//Boltzmann constant
-	KAPPA_0 = 1e-6;		//Spitzer coefficient for thermal conduction
-	MP = 1.67e-24;		//proton mass in g
-	MU = 1.;			
-	MI = MU*MP;
 	PI = M_PI;
 	
 	/****Declare variables****/
@@ -24,6 +19,7 @@ int main(int argc, char *argv[])
 	double f_thresh;
 	double f_test;
 	double Eh;
+	char species[64];
 	
 	//Int
 	int N;
@@ -71,7 +67,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n%le\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh);
+	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n%le\n%s\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh,species);
 	
 	//Add necessary inputs to input structure
 	inputs.L = L;
@@ -82,6 +78,9 @@ int main(int argc, char *argv[])
 	inputs.T0 = T0;
 	inputs.n0 = n0;
 	inputs.h0 = h0;
+	
+	//Calculate parameters specific to species
+	hydroloops_calc_abundance(species);
 	
 	/****Print header to standard output****/
 	hydroloops_print_header(inputs);
