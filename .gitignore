@@ -8,6 +8,7 @@ data
 *.m
 # ignore IDL procedures
 *.pro
-# ignore files used to run batch jobs
+# ignore shell script  used to run batch jobs
 many_loops
-loop_lengths.txt
+# ignore all text files
+*.txt
