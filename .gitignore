@@ -10,5 +10,5 @@ data
 *.pro
 # ignore shell script  used to run batch jobs
 many_loops
-# ignore all text files
-*.txt
+# ignore loop lengths text file
+loop_lengths.txt
