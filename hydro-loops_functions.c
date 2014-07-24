@@ -1,4 +1,27 @@
+/***************************************************************************
+File name: hydro-loops_functions.c
+Author: Will Barnes
+Date: 23 July 2014
+Description: This file holds the functions for the hydro-loops program which
+solves the hydrostatic equations for a uniformly or non-uniformly heated coronal
+loop. A description of each function can be found below.
+***************************************************************************/
+
 #include "hydro-loops.h"
+
+/***************************************************************************
+Function name: hydroloops_fconverge
+Description: This function solves the hydrostatic equations for some given 
+heating and inputs as specified in the inputs structure. 
+Inputs:
+	Eh0: heating rate coefficient (erg cm^-3)
+	Options inputs: structure containing all information read in from input
+					file. See hydro-loops.h for layout.
+Outputs:
+	loop_params: structure that holds plasma parameters computed by the 
+				 hydrostatic equations and updated loop coordinates.
+***************************************************************************/
+
 
 struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 {
@@ -124,6 +147,18 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	return loop_params;
 }
 
+/***************************************************************************
+Function name: hydroloops_heating
+Description: This function computes the ad-hoc volumetric heating. 
+Inputs:
+	s: loop coordinate (cm)
+	Eh0: heating rate coefficient (erg cm^-3)
+	Options inputs: structure containing all information read in from input
+					file. See hydro-loops.h for layout.
+Outputs:
+	Eh: heating rate; for the uniform case, Eh=Eh0
+***************************************************************************/
+
 double hydroloops_heating(double s,double Eh0,struct Options inputs)
 {
 	//Declare variables
@@ -149,6 +184,18 @@ double hydroloops_heating(double s,double Eh0,struct Options inputs)
 	
 	return Eh;
 }
+
+/***************************************************************************
+Function name: hydroloops_rad_loss
+Description: This function computes the radiative loss function for a given
+	 		 temperature.
+Inputs:
+	T: temperature (K)
+	Options inputs: structure containing all information read in from input
+					file. See hydro-loops.h for layout.
+Outputs:
+	lambda: radiative loss function
+***************************************************************************/
 
 double hydroloops_rad_loss(double T, struct Options inputs)
 {
@@ -227,6 +274,17 @@ double hydroloops_rad_loss(double T, struct Options inputs)
 	return lambda;
 }
 
+/***************************************************************************
+Function name: hydroloops_print_data
+Description: This function prints the contents of the main data structure to
+a specified file. 
+Inputs:
+	hydroloops_st loop_param: structure that holds all computed plasma 
+							  parameters
+	Options inputs: structure that holds input parameters
+Outputs:
+***************************************************************************/
+
 void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inputs)
 {
 	//Declare variables
@@ -274,6 +332,15 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	fclose(out_file);
 }
 
+/***************************************************************************
+Function name: hydroloops_print_header
+Description: This function prints a header to the screen each time the program
+begins execution.
+Inputs:
+	Options inputs: structure that holds input parameters
+Outputs:
+***************************************************************************/
+
 void hydroloops_print_header(struct Options inputs)
 {
 	//Print header to the screen
@@ -313,6 +380,15 @@ void hydroloops_print_header(struct Options inputs)
 	
 }
 
+/***************************************************************************
+Function name: hydroloops_free_struct
+Description: This function frees memory used by the main structure to store
+plasma parameters computed by the hydrostatic equations.
+Inputs:
+	hydroloops_st loop_param: structure that holds all computed plasma 
+							  parameters
+Outputs:
+***************************************************************************/
 
 void hydroloops_free_struct(struct hydroloops_st *loop_param)
 {
@@ -343,6 +419,17 @@ void hydroloops_free_struct(struct hydroloops_st *loop_param)
 	free(loop_param);
 }
 
+/***************************************************************************
+Function name: hydroloops_linspace
+Description: This function constructs a vector beginning at a and ending at 
+			 b with n entries; meant to emulate equivalen MATLAB function.
+Inputs:
+	a: first entry of array
+	b: last entry of array
+	n: number of entries in array
+Outputs:
+***************************************************************************/
+
 double * hydroloops_linspace( double a, double b, int n)
 {
 	//Declare necessary variables
@@ -360,6 +447,16 @@ double * hydroloops_linspace( double a, double b, int n)
 
 	return linspace;
 }
+
+/***************************************************************************
+Function name: hydroloops_calc_abundance
+Description: This function calculates the mean molecular weight given some abundance
+and modifies expressions for KB and MP to account for presence of additional
+species. 
+Inputs:
+	species: specifies whether run is for electrons or ions
+Outputs:
+***************************************************************************/
 
 void hydroloops_calc_abundance(char *species)
 {
@@ -396,6 +493,16 @@ void hydroloops_calc_abundance(char *species)
 		exit(1);
 	}
 }
+
+/***************************************************************************
+Function name: hydroloops_avg_val
+Description: This function computes the average value for some array.
+Inputs:
+	numbers: array of numbers whose mean is calculated
+	length: length of the numbers array
+Outputs:
+	mean: mean of the numbers array
+***************************************************************************/
 
 double hydroloops_avg_val (double numbers[], int length)
 {

@@ -49,22 +49,32 @@ struct hydroloops_st {
 };
 
 //Function Prototypes
+
+//Declare function hydroloops_linspace of type double
 double * hydroloops_linspace(double, double, int);
 
+//Declare function hydroloops_fconverge of type struct hydroloops_st
 struct hydroloops_st *hydroloops_fconverge(double, struct Options);
 
+//Declare function hydroloops_heating of type double
 double hydroloops_heating(double, double, struct Options);
 
+//Declare function hydroloops_rad_loss of type double
 double hydroloops_rad_loss(double, struct Options);
 
+//Declare function hydroloops_free_struct of type void
 void hydroloops_free_struct(struct hydroloops_st *);
 
+//Declare function hydroloops_print_data of type void
 void hydroloops_print_data(struct hydroloops_st *,struct Options);
 
+//Declare function hydroloops_print_header of type void
 void hydroloops_print_header(struct Options);
 
+//Declare function hydroloops_calc_abundance of type void
 void hydroloops_calc_abundance(char *);
 
+//Declare function hydroloops_avg_val of type double
 double hydroloops_avg_val(double[], int);
 
 #endif

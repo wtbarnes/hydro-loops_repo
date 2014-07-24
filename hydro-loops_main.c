@@ -1,3 +1,13 @@
+/***************************************************************************
+File name: hydro-loops_main.c
+Author: Will Barnes
+Date: 23 July 2014
+Description: This file holds the main function for the hydro-loops program
+which solves the hydrstatic equations for a uniformly or non-uniformly heated
+coronal loop. This program is based on notes from the ASTR 554 Astrophysics of 
+the Sun course taught by Professor Stephen Bradshaw, Rice University, Fall 2013.
+***************************************************************************/
+
 #include "hydro-loops.h"
 
 int main(int argc, char *argv[])
@@ -12,7 +22,7 @@ int main(int argc, char *argv[])
 	double L;
 	double Sh;
 	double Emin;
-	double Emax;
+	double Emax,Emax_old;
 	double T0;
 	double n0;
 	double h0;
@@ -29,9 +39,6 @@ int main(int argc, char *argv[])
 	int i;
 	int res_count = 0;
 	int res_thresh = 10;
-	
-	//Pointers
-	double *Eh_ptr;
 	
 	//Char
 	char filename_in[64];
@@ -88,16 +95,13 @@ int main(int argc, char *argv[])
 	/****Convergence on flux boundary condition****/
 	//Set f_test to start while loop
 	f_test = f_thresh + 1;
-	
-	//Create initial heating array
-	Eh_ptr = hydroloops_linspace(Emin,Emax,Eh_length);
-	
+		
 	while(fabs(f_test) > f_thresh && res_count <= res_thresh)
 	{
 		for(i = 0; i<Eh_length; i++)
 		{
 			//Set the heating from the array
-			Eh = *(Eh_ptr + i);
+			Eh = Emin + i*(Emax - Emin)/(Eh_length - 1.);
 			
 			//Print the current heating rate
 			printf("Using heating rate %le\n",Eh);
@@ -121,14 +125,9 @@ int main(int argc, char *argv[])
 			{
 				
 				//Reset the heating array
+				Emax_old = Emax;
 				Emax = Eh;
-				Emin = *(Eh_ptr + (i-1));
-				free(Eh_ptr);
-				Eh_ptr = NULL;
-				Eh_ptr = hydroloops_linspace(Emin,Emax,Eh_length);
-				
-				//DEBUG
-				printf("Reset the heating array\n");
+				Emin = Eh - (Emax_old - Emin)/(Eh_length - 1.);
 				
 				//Increment the counter
 				res_count += 1;
@@ -169,9 +168,6 @@ int main(int argc, char *argv[])
 	
 	//Clear the memory of the hydroloops structure
 	hydroloops_free_struct(loop_params);
-	//Clear the memory of the heating pointer
-	free(Eh_ptr);
-	Eh_ptr = NULL;
 	
 	//Exit with no errors
 	return 0;
