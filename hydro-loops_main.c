@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	//Define global variables
 	RSOL = 6.9550e+10; 	//Radius of the Sun in cm 
 	GSOL = 27395.;		//Gravitational acceleration at the solar surface
-	PI = M_PI;
+	PI = 3.14159;
 	
 	/****Declare variables****/
 	//Double
