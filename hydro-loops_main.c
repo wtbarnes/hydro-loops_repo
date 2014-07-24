@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 			loop_params = hydroloops_fconverge(Eh,inputs);
 			
 			//Set the flux boundary condition
-			f_test = *(loop_params->flux_end);
+			f_test = loop_params->flux_end;
 			
 			//Check the value of f_test to see if it has passed zero(+ threshold flux)
 			//(add in a check for complex numbers)
