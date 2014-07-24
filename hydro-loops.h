@@ -45,6 +45,7 @@ struct hydroloops_st {
 	double *h;
 	double c2;
 	double c3;
+	double flux_end;
 	
 };
 

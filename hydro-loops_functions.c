@@ -89,8 +89,10 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		//Check if temperature is less than zero
 		if(T < 0)
 		{
+			//Print error to the screen
 			printf("Temperature less than zero. Breaking the loop\n");
 			printf("Flux: F = %f\n",F);
+			
 			break;
 		}
 		//Update loop coordinates
@@ -142,6 +144,10 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	//Save these to the structure
 	loop_params->c2 = c2;
 	loop_params->c3 = c3;
+	
+	//Set the flux end value
+	//Notice that the case of T<0 is covered here since F>>f_thresh in this case
+	loop_params->flux_end = F;
 	
 	//Return structure containing plasma properties
 	return loop_params;
