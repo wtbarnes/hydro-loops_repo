@@ -31,6 +31,7 @@ struct Options {
 	int N;
 	int rad_key;
 	int heat_key;
+	char *species;
 };
 
 //Declare structure to return loop data

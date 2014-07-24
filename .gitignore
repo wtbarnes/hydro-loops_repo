@@ -11,4 +11,6 @@ data
 # ignore shell script  used to run batch jobs
 many_loops
 # ignore loop lengths text file
-loop_lengths.txt
+loop_lengths*.txt
+# ignore ipython scripts 
+*.ipynb

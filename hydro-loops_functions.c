@@ -43,6 +43,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	
 	//Int
 	int i;
+	int t_flag = 0;
 	
 	//Structures
 	//Reserve memory for structure that will return loop parameters
@@ -93,6 +94,9 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 			printf("Temperature less than zero. Breaking the loop\n");
 			printf("Flux: F = %f\n",F);
 			
+			//Raise the negative temperature flag
+			t_flag = 1;
+			
 			break;
 		}
 		//Update loop coordinates
@@ -136,14 +140,18 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	printf("n(s=L) = %f (10^8)\n",n/1e+8);
 	printf("******************************************\n");
 	
-	//Calculate the EBTEL coefficients
-	mean_T = hydroloops_avg_val(loop_params->T,inputs.N);
-	c2 = mean_T/loop_params->T[inputs.N-1];
-	c3 = loop_params->T[0]/loop_params->T[inputs.N-1];
+	//Check and make sure we didn't break early for T<0
+	if(t_flag == 0)
+	{
+		//Calculate the EBTEL coefficients
+		mean_T = hydroloops_avg_val(loop_params->T,inputs.N);
+		c2 = mean_T/loop_params->T[inputs.N-1];
+		c3 = loop_params->T[0]/loop_params->T[inputs.N-1];
 	
-	//Save these to the structure
-	loop_params->c2 = c2;
-	loop_params->c3 = c3;
+		//Save these to the structure
+		loop_params->c2 = c2;
+		loop_params->c3 = c3;
+	}
 	
 	//Set the flux end value
 	//Notice that the case of T<0 is covered here since F>>f_thresh in this case
@@ -179,7 +187,7 @@ double hydroloops_heating(double s,double Eh0,struct Options inputs)
 	else if(inputs.heat_key == 1)
 	{
 		//Non-uniform heating
-		Eh = Eh0*exp(-s/inputs.Sh);
+		Eh = Eh0*exp(-pow((s - inputs.h0),2.0)/(2.*pow((inputs.Sh),2.0)));
 	}
 	else
 	{
@@ -307,7 +315,7 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	}
 	
 	//Create the filename and open the file
-	sprintf(fn_out,"data/loopsdat_L_%d_Sh_%d_Eh_%d.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key);
+	sprintf(fn_out,"data/loopsdat_L_%d_Sh_%d_Eh_%d_%s.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key, inputs.species);
 	out_file = fopen(fn_out,"wt");
 	
 	//Tell the user where the results were printed
@@ -325,7 +333,7 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	/****Print Coefficient Results****/
 	
 	//Print relavent coefficients to separate file
-	sprintf(fn_out_coeff,"data/coeffdat_L_%d_Sh_%d_Eh_%d.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key);
+	sprintf(fn_out_coeff,"data/coeffdat_L_%d_Sh_%d_Eh_%d_%s.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key, inputs.species);
 	out_file = fopen(fn_out_coeff,"wt");
 	
 	//Tell the user where the coefficient results were printed

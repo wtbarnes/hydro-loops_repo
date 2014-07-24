@@ -12,6 +12,14 @@ the Sun course taught by Professor Stephen Bradshaw, Rice University, Fall 2013.
 
 int main(int argc, char *argv[])
 {
+	//Use clock to time the entire hydro-loops program
+	clock_t time_start;
+	clock_t time_diff;
+	double time_elapsed;
+	
+	//Start the timer
+	time_start = clock();
+	
 	//Define global variables
 	RSOL = 6.9550e+10; 	//Radius of the Sun in cm 
 	GSOL = 27395.;		//Gravitational acceleration at the solar surface
@@ -38,7 +46,7 @@ int main(int argc, char *argv[])
 	int Eh_length = 10;
 	int i;
 	int res_count = 0;
-	int res_thresh = 10;
+	int res_thresh = 20;
 	
 	//Char
 	char filename_in[64];
@@ -85,6 +93,7 @@ int main(int argc, char *argv[])
 	inputs.T0 = T0;
 	inputs.n0 = n0;
 	inputs.h0 = h0;
+	inputs.species = species;
 	
 	//Calculate parameters specific to species
 	hydroloops_calc_abundance(species);
@@ -130,6 +139,8 @@ int main(int argc, char *argv[])
 				
 				//Increment the counter
 				res_count += 1;
+				//Print the counter
+				printf("Heating reset %d times\n",res_count);
 				
 				//Clear the hydroloops_st structure and all of its members. It will be malloc'd on the
 				//next iteration.
@@ -153,20 +164,27 @@ int main(int argc, char *argv[])
 	}
 	
 	//If the reset count was exceeded, don't print any data
-	if(res_count == res_thresh)
+	if(res_count > res_thresh)
 	{
 		printf("Unable to converge on desired boundary conditions.\n");
-		printf("F(s=L) = %f, Eh = %f for L = %f, Sh = %f\n",*(loop_params->F + (N-1)),Eh,L,Sh);
-		printf("Trying increasing the grid size or refining the heating array.\n");
+		printf("F(s=L) = %4.2le, Eh = %f for L = %4.2le, Sh = %4.2le\n",loop_params->flux_end,Eh,L,Sh);
+		printf("Try increasing the grid size or refining the heating array.\n");
+		printf("It is also possible that there is no solution for (L,Sh) = (%4.2f,%4.2f) Mm\n",L/1.e+8,Sh/1.e+8);
 	}
 	else
 	{
 		//Print the data to a file
 		hydroloops_print_data(loop_params,inputs);
+		//Clear the memory of the hydroloops structure
+		hydroloops_free_struct(loop_params);
 	}
 	
-	//Clear the memory of the hydroloops structure
-	hydroloops_free_struct(loop_params);
+	//Stop the timer
+	time_diff = clock() - time_start;
+	time_elapsed = time_diff*1000/CLOCKS_PER_SEC;
+	
+	//Time elapsed
+	printf("The process took %f milliseconds to run\n",time_elapsed);
 	
 	//Exit with no errors
 	return 0;
