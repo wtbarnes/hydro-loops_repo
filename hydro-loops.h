@@ -48,8 +48,9 @@ struct hydroloops_st {
 	double *r;
 	double *g;
 	double *h;
-	double c2;
-	double c3;
+	double *v;
+	double c2e,c2i;
+	double c3e,c3i;
 	double flux_end;
 	double t_end;
 };
@@ -84,6 +85,9 @@ void hydroloops_calc_abundance(void);
 double hydroloops_avg_val(double[], int);
 
 //Declare function hydroloops_collision_freq of type double
-double ebtel_collision_freq(double, double);
+double hydroloops_collision_freq(double, double);
+
+//Declare function hydroloops_euler_solver of type double *
+double * hydroloops_euler_solver(double,double,double,double,double,double,double,double,double,double,double,double);
 
 #endif

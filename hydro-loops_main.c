@@ -41,7 +41,6 @@ int main(int argc, char *argv[])
 	double f_test;
 	double t_test;
 	double Eh;
-	char species[64];
 	
 	//Int
 	int N;

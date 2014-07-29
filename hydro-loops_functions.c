@@ -32,17 +32,17 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	double r;
 	double g;
 	double h;
+	double v;
 	double Fe,Fi;
 	double Te,Ti;
 	double n;
 	double Pe,Pi;
 	double delta_s;
-	double dFe,dFi,dTe,dTi,dPe,dPi;
 	double lambda;
 	double Eh;
-	double nu_ei;
 	double c2e,c3e,mean_Te;
 	double c2i,c3i,mean_Ti;
+	double *state_ptr;
 	
 	//Int
 	int i;
@@ -57,6 +57,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	loop_params->r = malloc(sizeof(double[inputs.N]));
 	loop_params->g = malloc(sizeof(double[inputs.N]));
 	loop_params->h = malloc(sizeof(double[inputs.N]));
+	loop_params->v = malloc(sizeof(double[inputs.N]));
 	loop_params->Fe = malloc(sizeof(double[inputs.N]));
 	loop_params->Te = malloc(sizeof(double[inputs.N]));
 	loop_params->Pe = malloc(sizeof(double[inputs.N]));
@@ -74,6 +75,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	r = RSOL + inputs.h0;
 	g = GSOL*pow(RSOL/r,2.)*cos(PI*s/(2.*inputs.L));
 	h = inputs.h0;
+	v = 50; //cm s^-1
 	Fe = 0.;
 	Fi = Fe;
 	Te = inputs.T0;
@@ -87,6 +89,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	loop_params->r[0] = r;
 	loop_params->g[0] = g;
 	loop_params->h[0] = h;
+	loop_params->v[0] = v;
 	loop_params->Fe[0] = Fe;
 	loop_params->Fi[0] = Fi;
 	loop_params->Te[0] = Te;
@@ -103,7 +106,8 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		{
 			//Print error to the screen
 			printf("Temperature less than zero. Breaking the loop\n");
-			printf("Flux: F = %f\n",F);
+			printf("Flux: Fe = %f\n",Fe);
+			printf("Flux: Fi = %f\n",Fi);
 			
 			//Reset the flux to avoid breaking early
 			Fe = inputs.f_thresh + 1.;
@@ -113,6 +117,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 			
 			break;
 		}
+		
 		//Update loop coordinates
 		s += delta_s;
 		r = RSOL + 2*inputs.L/PI*sin(PI*s/(2.*inputs.L));
@@ -125,25 +130,18 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		//Calculate the heating
 		Eh = hydroloops_heating(s,Eh0,inputs);
 		
-		//Calculate collisional frequency of collisions between electrons and ions
-		nu_ei = hydroloops_collision_freq(Te,n);
-		
-		//Step through F,T,P and n parameters using energy and momentum equations
-		dFe = (Eh - pow(n,2)*lambda + 3./2.*KB*n*nu_ei*(Ti - Te))*delta_s;
-		dFi = (3./2.*KB*n*nu_ei*(Te - Ti))*delta_s;
-		dTe = Fe/(-KAPPA_0_E*pow(Te,5./2.))*delta_s;
-		dTi = Fi/(-KAPPA_0_I*pow(Ti,5./2.))*delta_s;
-		dPe = -M_EL*n*g*delta_s;
-		dPi = -MI*n*g*delta_s;
-		
-		//Update all of the parameters--FINISH UPDATING FROM HERE FOR TWO FLUID CASE!!
-		Fe = dFe + Fe;
-		Fi = dFi + Fi;
-		Te = dTe + Te;
-		Ti = dTi + Ti;
-		Pe = dPe + Pe;
-		Pi = dPi + Pi;
-		n = Pe/(KB*Te);
+		//Update parameter state vector
+		state_ptr = hydroloops_euler_solver(Fe, Fi, Te, Ti, n, v, Pe, Pi, lambda, g, Eh, delta_s);
+		Fe = *(state_ptr + 0);
+		Fi = *(state_ptr + 1);
+		Te = *(state_ptr + 2);
+		Ti = *(state_ptr + 3);
+		n = *(state_ptr + 4);
+		v = *(state_ptr + 5);
+		Pe = *(state_ptr + 6);
+		Pi = *(state_ptr + 7);
+		free(state_ptr);
+		state_ptr = NULL;
 		
 		//Save updated parameters to data structure
 		loop_params->s[i] = s;
@@ -162,8 +160,10 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		
 	//Display some results
 	printf("******************************************\n");
-	printf("BC: F(s=L) = %f\n",F);
-	printf("T(s=L) = %f MK\n",T/1e+6);
+	printf("BC: Fe(s=L) = %f\n",Fe);
+	printf("BC: Fi(s=L) = %f\n",Fi);
+	printf("Te(s=L) = %f MK\n",Te/1e+6);
+	printf("Ti(s=L) = %f MK\n",Ti/1e+6);
 	printf("n(s=L) = %f (10^8)\n",n/1e+8);
 	printf("******************************************\n");
 	
@@ -518,7 +518,6 @@ Outputs:
 void hydroloops_calc_abundance(void)
 {
 	double m_p = 1.67e-24;
-	double m_p_old = m_p;
 	
 	//Calculate average ion mass
     double n_he_n_p = 0.075;   //He/p abundance.
@@ -582,7 +581,7 @@ OUTPUTS:
 
 ***********************************************************************************/
 
-double ebtel_collision_freq(double T_e, double n)
+double hydroloops_collision_freq(double T_e, double n)
 {
 	//Declare variables
 	double ln_lambda;
@@ -594,7 +593,58 @@ double ebtel_collision_freq(double T_e, double n)
 	ln_lambda = 23 - log(sqrt(n/beta_1)*pow(KB*T_e/beta_2,-3./2.));	
 		
 	//Calculate collision frequency
-	nu_ei = 16./3.*sqrt(PI)*pow(Q_E,4.)/(M_EL*M_P)*pow(2*KB*T_e/M_EL,-3./2.)*n*ln_lambda;
+	nu_ei = 16./3.*sqrt(PI)*pow(Q_E,4.)/(M_EL*MI)*pow(2*KB*T_e/M_EL,-3./2.)*n*ln_lambda;
 	
 	return nu_ei;
+}
+
+double * hydroloops_euler_solver(double Fe, double Fi, double Te, double Ti, double n, double v, double Pe, double Pi, double lambda, double g, double Eh, double delta_s)
+{
+	//Declare variables
+	double dFe,dFi,dTe,dTi,dn,dv;
+	double nu_ei;
+	double dv_ds;
+	double *state_ptr = malloc(sizeof(double[8]));
+	
+	//Calculate collisional frequency of collisions between electrons and ions
+	nu_ei = hydroloops_collision_freq(Te,n);
+	
+	//Calculate velocity gradient--will be used in calculating all other steps
+	dv_ds = v/(pow(v,2.)*(M_EL+MI) - KB*(Te + Ti))*(-(M_EL + MI)*g + KB*(Fe/(KAPPA_0_E*pow(Te,5./2.)) + Fi/(KAPPA_0_I*pow(Ti,5./2.))));
+	
+	//Step through F,T,P and n parameters using energy and momentum equations
+	dFe = (Eh - pow(n,2)*lambda + 3./2.*KB*n*nu_ei*(Ti - Te) + 3./2.*v*n*KB*Fe/(KAPPA_0_E*pow(Te,5./2.)) - Pe*dv_ds)*delta_s;
+	
+	dFi = (3./2.*KB*n*nu_ei*(Te - Ti) - (M_EL + MI)*n*v*g + (Pe - (M_EL + MI)*n*pow(v,2.))*dv_ds + n*v*KB*(5./2.*Fi/(KAPPA_0_I*pow(Ti,5./2.)) + Fe/(KAPPA_0_E*pow(Te,5./2.))))*delta_s;
+	
+	dTe = Fe/(-KAPPA_0_E*pow(Te,5./2.))*delta_s;
+	
+	dTi = Fi/(-KAPPA_0_I*pow(Ti,5./2.))*delta_s;
+	
+	dn = -n/v*dv_ds*delta_s;
+	
+	dv = dv_ds*delta_s;
+	
+	//Update all of the parameters
+	Fe = dFe + Fe;
+	Fi = dFi + Fi;
+	Te = dTe + Te;
+	Ti = dTi + Ti;
+	n = dn + n;
+	v = dv + v;
+	Pe = KB*n*Te;
+	Pi = KB*n*Ti;
+	
+	//Set the pointer
+	state_ptr[0] = Fe;
+	state_ptr[1] = Fi;
+	state_ptr[2] = Te;
+	state_ptr[3] = Ti;
+	state_ptr[4] = n;
+	state_ptr[5] = v;
+	state_ptr[6] = Pe;
+	state_ptr[7] = Pi;
+	
+	//Return pointer with all of the updated parameters
+	return state_ptr;
 }
