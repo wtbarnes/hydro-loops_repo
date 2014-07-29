@@ -14,11 +14,12 @@
 //Declare some global variables
 double RSOL;
 double GSOL;
-double KB;
-double KAPPA_0;
-double MU;
+double KB, KB_FACT;
+double KAPPA_0_E, KAPPA_0_I;
 double Z_AVG;
 double MI;
+double M_EL;
+double Q_E;
 double PI;
 
 //Declare input structure
@@ -28,17 +29,20 @@ struct Options {
 	double T0;
 	double n0;
 	double h0;
+	double f_thresh;
 	int N;
 	int rad_key;
 	int heat_key;
-	char *species;
 };
 
 //Declare structure to return loop data
 struct hydroloops_st {
-	double *F;
-	double *T;
-	double *P;
+	double *Fe;
+	double *Fi;
+	double *Te;
+	double *Ti;
+	double *Pe;
+	double *Pi;
 	double *n;
 	double *s;
 	double *r;
@@ -47,7 +51,7 @@ struct hydroloops_st {
 	double c2;
 	double c3;
 	double flux_end;
-	
+	double t_end;
 };
 
 //Function Prototypes
@@ -74,9 +78,12 @@ void hydroloops_print_data(struct hydroloops_st *,struct Options);
 void hydroloops_print_header(struct Options);
 
 //Declare function hydroloops_calc_abundance of type void
-void hydroloops_calc_abundance(char *);
+void hydroloops_calc_abundance(void);
 
 //Declare function hydroloops_avg_val of type double
 double hydroloops_avg_val(double[], int);
+
+//Declare function hydroloops_collision_freq of type double
+double ebtel_collision_freq(double, double);
 
 #endif

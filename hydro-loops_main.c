@@ -24,6 +24,9 @@ int main(int argc, char *argv[])
 	RSOL = 6.9550e+10; 	//Radius of the Sun in cm 
 	GSOL = 27395.;		//Gravitational acceleration at the solar surface
 	PI = 3.14159;
+	Q_E = 4.8032e-10;	//charge of e- in stat coloumbs
+	M_EL = 9.11e-28;	//mass of e- in grams
+	KB = 1.38e-16;		//Boltzmann constant in erg K^-1
 	
 	/****Declare variables****/
 	//Double
@@ -36,6 +39,7 @@ int main(int argc, char *argv[])
 	double h0;
 	double f_thresh;
 	double f_test;
+	double t_test;
 	double Eh;
 	char species[64];
 	
@@ -82,7 +86,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n%le\n%s\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh,species);
+	fscanf(in_file,"%d\n%d\n%d\n%le\n%le\n%le\n%le\n%le\n%le\n",&N,&heat_key,&rad_key,&Emin,&Emax,&T0,&n0,&h0,&f_thresh);
 	
 	//Add necessary inputs to input structure
 	inputs.L = L;
@@ -93,10 +97,10 @@ int main(int argc, char *argv[])
 	inputs.T0 = T0;
 	inputs.n0 = n0;
 	inputs.h0 = h0;
-	inputs.species = species;
+	inputs.f_thresh = f_thresh;
 	
 	//Calculate parameters specific to species
-	hydroloops_calc_abundance(species);
+	hydroloops_calc_abundance();
 	
 	/****Print header to standard output****/
 	hydroloops_print_header(inputs);
@@ -121,6 +125,9 @@ int main(int argc, char *argv[])
 			//Set the flux boundary condition
 			f_test = loop_params->flux_end;
 			
+			//Set the T condition
+			t_test = loop_params->t_end;
+			
 			//Check the value of f_test to see if it has passed zero(+ threshold flux)
 			//(add in a check for complex numbers)
 			if(res_count > res_thresh)
@@ -130,7 +137,7 @@ int main(int argc, char *argv[])
 				break;
 				
 			}
-			else if(f_test > f_thresh)
+			else if(f_test > f_thresh || t_test < 0.)
 			{
 				//Reset the heating array
 				Emax_old = Emax;

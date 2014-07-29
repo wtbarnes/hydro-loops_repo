@@ -7,6 +7,7 @@ solves the hydrostatic equations for a uniformly or non-uniformly heated coronal
 loop. A description of each function can be found below.
 ***************************************************************************/
 
+//Include appropriate header file
 #include "hydro-loops.h"
 
 /***************************************************************************
@@ -31,15 +32,17 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	double r;
 	double g;
 	double h;
-	double F;
-	double T;
+	double Fe,Fi;
+	double Te,Ti;
 	double n;
-	double P;
+	double Pe,Pi;
 	double delta_s;
-	double dF,dT,dP;
+	double dFe,dFi,dTe,dTi,dPe,dPi;
 	double lambda;
 	double Eh;
-	double c2,c3,mean_T;
+	double nu_ei;
+	double c2e,c3e,mean_Te;
+	double c2i,c3i,mean_Ti;
 	
 	//Int
 	int i;
@@ -54,11 +57,13 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	loop_params->r = malloc(sizeof(double[inputs.N]));
 	loop_params->g = malloc(sizeof(double[inputs.N]));
 	loop_params->h = malloc(sizeof(double[inputs.N]));
-	loop_params->F = malloc(sizeof(double[inputs.N]));
-	loop_params->T = malloc(sizeof(double[inputs.N]));
+	loop_params->Fe = malloc(sizeof(double[inputs.N]));
+	loop_params->Te = malloc(sizeof(double[inputs.N]));
+	loop_params->Pe = malloc(sizeof(double[inputs.N]));
+	loop_params->Fi = malloc(sizeof(double[inputs.N]));
+	loop_params->Ti = malloc(sizeof(double[inputs.N]));
+	loop_params->Pi = malloc(sizeof(double[inputs.N]));
 	loop_params->n = malloc(sizeof(double[inputs.N]));
-	loop_params->P = malloc(sizeof(double[inputs.N]));
-	
 	
 	/****Initial Calculations****/
 	//Calculate spatial step
@@ -69,30 +74,39 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	r = RSOL + inputs.h0;
 	g = GSOL*pow(RSOL/r,2.)*cos(PI*s/(2.*inputs.L));
 	h = inputs.h0;
-	F = 0.;
-	T = inputs.T0;
+	Fe = 0.;
+	Fi = Fe;
+	Te = inputs.T0;
+	Ti = Te;
 	n = inputs.n0;
-	P = 2*inputs.n0*KB*inputs.T0;
+	Pe = inputs.n0*KB*inputs.T0;
+	Pi = Pe;
 	
 	//Save the data for the first iteration
 	loop_params->s[0] = s;
 	loop_params->r[0] = r;
 	loop_params->g[0] = g;
 	loop_params->h[0] = h;
-	loop_params->F[0] = F;
-	loop_params->T[0] = T;
+	loop_params->Fe[0] = Fe;
+	loop_params->Fi[0] = Fi;
+	loop_params->Te[0] = Te;
+	loop_params->Ti[0] = Ti;
 	loop_params->n[0] = n;
-	loop_params->P[0] = P;
+	loop_params->Pe[0] = Pe;
+	loop_params->Pi[0] = Pi;
 	
 	/****Compute Parameters over Loop Half-Length****/
 	for(i = 1; i < inputs.N; i++)
 	{
 		//Check if temperature is less than zero
-		if(T < 0)
+		if(Te < 0 || Ti < 0)
 		{
 			//Print error to the screen
 			printf("Temperature less than zero. Breaking the loop\n");
 			printf("Flux: F = %f\n",F);
+			
+			//Reset the flux to avoid breaking early
+			Fe = inputs.f_thresh + 1.;
 			
 			//Raise the negative temperature flag
 			t_flag = 1;
@@ -106,33 +120,46 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		h = r - RSOL;
 		
 		//Calculate the radiative loss function
-		lambda = hydroloops_rad_loss(T,inputs);
+		lambda = hydroloops_rad_loss(Te,inputs);
 		
 		//Calculate the heating
 		Eh = hydroloops_heating(s,Eh0,inputs);
 		
-		//Step through F,T,P and n parameters using energy and momentum equations
-		dF = (Eh - pow(n,2)*lambda)*delta_s;
-		dT = F/(-KAPPA_0*pow(T,5./2.))*delta_s;
-		dP = -MI*n*g*delta_s;
+		//Calculate collisional frequency of collisions between electrons and ions
+		nu_ei = hydroloops_collision_freq(Te,n);
 		
-		//Update all of the parameters
-		F = dF + F;
-		T = dT + T;
-		P = dP + P;
-		n = P/(2.*KB*T);
+		//Step through F,T,P and n parameters using energy and momentum equations
+		dFe = (Eh - pow(n,2)*lambda + 3./2.*KB*n*nu_ei*(Ti - Te))*delta_s;
+		dFi = (3./2.*KB*n*nu_ei*(Te - Ti))*delta_s;
+		dTe = Fe/(-KAPPA_0_E*pow(Te,5./2.))*delta_s;
+		dTi = Fi/(-KAPPA_0_I*pow(Ti,5./2.))*delta_s;
+		dPe = -M_EL*n*g*delta_s;
+		dPi = -MI*n*g*delta_s;
+		
+		//Update all of the parameters--FINISH UPDATING FROM HERE FOR TWO FLUID CASE!!
+		Fe = dFe + Fe;
+		Fi = dFi + Fi;
+		Te = dTe + Te;
+		Ti = dTi + Ti;
+		Pe = dPe + Pe;
+		Pi = dPi + Pi;
+		n = Pe/(KB*Te);
 		
 		//Save updated parameters to data structure
 		loop_params->s[i] = s;
 		loop_params->r[i] = r;
 		loop_params->g[i] = g;
 		loop_params->h[i] = h;
-		loop_params->F[i] = F;
-		loop_params->T[i] = T;
+		
+		loop_params->Pe[i] = Pe;
+		loop_params->Fe[i] = Fe;
+		loop_params->Te[i] = Te;
 		loop_params->n[i] = n;
-		loop_params->P[i] = P;
+		loop_params->Pi[i] = Pi;
+		loop_params->Fi[i] = Fi;
+		loop_params->Ti[i] = Ti;
 	}
-	
+		
 	//Display some results
 	printf("******************************************\n");
 	printf("BC: F(s=L) = %f\n",F);
@@ -141,21 +168,29 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	printf("******************************************\n");
 	
 	//Check and make sure we didn't break early for T<0
+	//This avoids segmentation fault if we broke early
 	if(t_flag == 0)
 	{
 		//Calculate the EBTEL coefficients
-		mean_T = hydroloops_avg_val(loop_params->T,inputs.N);
-		c2 = mean_T/loop_params->T[inputs.N-1];
-		c3 = loop_params->T[0]/loop_params->T[inputs.N-1];
+		mean_Te = hydroloops_avg_val(loop_params->Te,inputs.N);
+		mean_Ti = hydroloops_avg_val(loop_params->Ti,inputs.N);
+		c2e = mean_Te/loop_params->Te[inputs.N-1];
+		c3e = loop_params->Te[0]/loop_params->Te[inputs.N-1];
+		c2i = mean_Ti/loop_params->Ti[inputs.N-1];
+		c3i = loop_params->Ti[0]/loop_params->Ti[inputs.N-1];
 	
 		//Save these to the structure
-		loop_params->c2 = c2;
-		loop_params->c3 = c3;
+		loop_params->c2e = c2e;
+		loop_params->c3e = c3e;
+		loop_params->c2i = c2i;
+		loop_params->c3i = c3i;
 	}
 	
 	//Set the flux end value
-	//Notice that the case of T<0 is covered here since F>>f_thresh in this case
-	loop_params->flux_end = F;
+	loop_params->flux_end = Fe;
+	
+	//Set the temperature end value
+	loop_params->t_end = Te;
 	
 	//Return structure containing plasma properties
 	return loop_params;
@@ -187,7 +222,8 @@ double hydroloops_heating(double s,double Eh0,struct Options inputs)
 	else if(inputs.heat_key == 1)
 	{
 		//Non-uniform heating
-		Eh = Eh0*exp(-pow((s - inputs.h0),2.0)/(2.*pow((inputs.Sh),2.0)));
+		Eh = Eh0*exp(-pow((s - inputs.h0),2.)/(2.*pow(inputs.Sh,2.)));
+		//Eh = Eh0*exp(-(s - inputs.h0)/inputs.Sh);
 	}
 	else
 	{
@@ -315,7 +351,7 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	}
 	
 	//Create the filename and open the file
-	sprintf(fn_out,"data/loopsdat_L_%d_Sh_%d_Eh_%d_%s.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key, inputs.species);
+	sprintf(fn_out,"data/loopsdat_L_%d_Sh_%d_Eh_%d.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key);
 	out_file = fopen(fn_out,"wt");
 	
 	//Tell the user where the results were printed
@@ -324,7 +360,7 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	//Print the data to the file
 	for(i = 0; i<i_max; i++)
 	{
-		fprintf(out_file,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",*(loop_param->s + i),*(loop_param->r + i),*(loop_param->g + i),*(loop_param->h + i),*(loop_param->F + i),*(loop_param->T + i),*(loop_param->P + i),*(loop_param->n + i));
+		fprintf(out_file,"%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n",*(loop_param->s + i),*(loop_param->r + i),*(loop_param->g + i),*(loop_param->h + i),*(loop_param->Fe + i),*(loop_param->Fi + i),*(loop_param->Te + i),*(loop_param->Ti + i),*(loop_param->Pe + i),*(loop_param->Pi + i),*(loop_param->n + i));
 	}
 	
 	//Close the file when we are done writing to it
@@ -333,14 +369,14 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	/****Print Coefficient Results****/
 	
 	//Print relavent coefficients to separate file
-	sprintf(fn_out_coeff,"data/coeffdat_L_%d_Sh_%d_Eh_%d_%s.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key, inputs.species);
+	sprintf(fn_out_coeff,"data/coeffdat_L_%d_Sh_%d_Eh_%d.txt",(int) (inputs.L/1e+8), (int) (inputs.Sh/1e+8), inputs.heat_key);
 	out_file = fopen(fn_out_coeff,"wt");
 	
 	//Tell the user where the coefficient results were printed
 	printf("The coefficient results were printed to the file %s\n",fn_out_coeff);
 	
 	//Print the data to the file
-	fprintf(out_file,"%f\n%f\n",loop_param->c2,loop_param->c3);
+	fprintf(out_file,"%f\n%f\n%f\n%f\n",loop_param->c2e,loop_param->c3e,loop_param->c2i,loop_param->c3i);
 	
 	//Close the file
 	fclose(out_file);
@@ -412,12 +448,19 @@ void hydroloops_free_struct(struct hydroloops_st *loop_param)
 	assert(loop_param != NULL);
 	
 	//Now free individual members
-	free(loop_param->F);
-	loop_param->F = NULL;
-	free(loop_param->T);
-	loop_param->T = NULL;
-	free(loop_param->P);
-	loop_param->P = NULL;
+	free(loop_param->Fe);
+	loop_param->Fe = NULL;
+	free(loop_param->Te);
+	loop_param->Te = NULL;
+	free(loop_param->Pe);
+	loop_param->Pe = NULL;
+	free(loop_param->Fi);
+	loop_param->Fi = NULL;
+	free(loop_param->Ti);
+	loop_param->Ti = NULL;
+	free(loop_param->Pi);
+	loop_param->Pi = NULL;
+	
 	free(loop_param->n);
 	loop_param->n = NULL;
 	free(loop_param->s);
@@ -472,40 +515,23 @@ Inputs:
 Outputs:
 ***************************************************************************/
 
-void hydroloops_calc_abundance(char *species)
+void hydroloops_calc_abundance(void)
 {
-	double k_b = 1.38e-16;
 	double m_p = 1.67e-24;
 	double m_p_old = m_p;
 	
 	//Calculate average ion mass
     double n_he_n_p = 0.075;   //He/p abundance.
-    Z_AVG = (1.0 + 2.0*n_he_n_p)/(1.0 + n_he_n_p); //Include Helium
-    //Z_AVG = 1.; //For Hydrad comparison.
-    double kb_fact = 0.5*(1.0+1.0/Z_AVG);
     double m_fact = (1.0 + n_he_n_p*4.0)/(2.0 + 3.0*n_he_n_p); //Include Helium
     //double m_fact = (1 + n_he_n_p*4.)/2.; //For Hydrad comparison
+    Z_AVG = (1.0 + 2.0*n_he_n_p)/(1.0 + n_he_n_p); //Include Helium
+    //Z_AVG = 1.; //For Hydrad comparison.
+    KB_FACT = 0.5*(1.0+1.0/Z_AVG);
 	
-	//Set global variables
-	if(strcmp(species,"electron") == 0)
-	{
-		MI = 9.11e-28;
-		KB = k_b;
-		MU = 1;
-		KAPPA_0 = 7.8e-7;		//Spitzer coefficient for thermal conduction (electrons)
-	}
-	else if(strcmp(species,"ion") == 0)
-	{
-	    MI = m_p*m_fact*(1.0 + Z_AVG)/Z_AVG; 	//Average ion mass
-		KB = k_b*kb_fact; 						//Modify equation of state for non-e-p plasma
-		MU = MI/m_p_old;						//Mean molecular weight
-		KAPPA_0 = 3.2e-8;						//Spitzer coefficient for thermal conduciton (ions)		
-	}
-	else
-	{
-		printf("Incorrect species input. Choose either electron or ion. Exiting the program\n");
-		exit(1);
-	}
+	KAPPA_0_E = 7.8e-7;		//Spitzer coefficient for thermal conduction (electrons)
+	KAPPA_0_I = 3.2e-8;		//Spitzer coefficient for thermal conduciton (ions)		
+
+    MI = m_p*m_fact*(1.0 + Z_AVG)/Z_AVG; 	//Average ion mass
 }
 
 /***************************************************************************
@@ -536,4 +562,39 @@ double hydroloops_avg_val (double numbers[], int length)
 	
 	//Return the mean
 	return mean;
+}
+
+/***********************************************************************************
+
+FUNCTION NAME: hydroloops_collision_freq
+
+FUNCTION_DESCRIPTION: This function calculates the coulomb collision frequency between
+the ions and electrons. The coulomb logarithm is calculated using the procedure found 
+in the 2009 edition of the NRL Plasma Formulary.
+
+INPUTS:
+	T_e--electron temperature (K)
+	T_i--ion temperature (K)
+	n--number density (cm^-3)
+	
+OUTPUTS:
+	nu_ei--electron-ion collision frequency
+
+***********************************************************************************/
+
+double ebtel_collision_freq(double T_e, double n)
+{
+	//Declare variables
+	double ln_lambda;
+	double nu_ei;
+	double beta_1 = 1.0e+13;
+	double beta_2 = 1.602*1e-9;
+	
+	//Expression for the Coulomb logarithm from Physics of the Solar Corona by M.J. Aschwanden
+	ln_lambda = 23 - log(sqrt(n/beta_1)*pow(KB*T_e/beta_2,-3./2.));	
+		
+	//Calculate collision frequency
+	nu_ei = 16./3.*sqrt(PI)*pow(Q_E,4.)/(M_EL*M_P)*pow(2*KB*T_e/M_EL,-3./2.)*n*ln_lambda;
+	
+	return nu_ei;
 }
