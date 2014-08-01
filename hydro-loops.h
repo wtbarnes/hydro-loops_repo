@@ -14,12 +14,9 @@
 //Declare some global variables
 double RSOL;
 double GSOL;
-double KB, KB_FACT;
-double KAPPA_0_E, KAPPA_0_I;
-double Z_AVG;
-double MI;
-double M_EL;
-double Q_E;
+double KB;
+double KAPPA_0;
+double MASS;
 double PI;
 
 //Declare input structure
@@ -29,30 +26,38 @@ struct Options {
 	double T0;
 	double n0;
 	double h0;
+	double v0;
 	double f_thresh;
 	int N;
 	int rad_key;
 	int heat_key;
+	char *species;
 };
 
 //Declare structure to return loop data
 struct hydroloops_st {
-	double *Fe;
-	double *Fi;
-	double *Te;
-	double *Ti;
-	double *Pe;
-	double *Pi;
+	double *F;
+	double *T;
+	double *P;
 	double *n;
 	double *s;
 	double *r;
 	double *g;
 	double *h;
 	double *v;
-	double c2e,c2i;
-	double c3e,c3i;
+	double c2,c3;
 	double flux_end;
 	double t_end;
+};
+
+//Declare structure that holds the state of the loop data
+struct state_st {
+	double F;
+	double T;
+	double n;
+	double P;
+	double v;
+	double g;
 };
 
 //Function Prototypes
@@ -79,15 +84,18 @@ void hydroloops_print_data(struct hydroloops_st *,struct Options);
 void hydroloops_print_header(struct Options);
 
 //Declare function hydroloops_calc_abundance of type void
-void hydroloops_calc_abundance(void);
+void hydroloops_calc_abundance(char *);
 
 //Declare function hydroloops_avg_val of type double
 double hydroloops_avg_val(double[], int);
 
 //Declare function hydroloops_collision_freq of type double
-double hydroloops_collision_freq(double, double);
+//double hydroloops_collision_freq(double, double);
 
 //Declare function hydroloops_euler_solver of type double *
-double * hydroloops_euler_solver(double,double,double,double,double,double,double,double,double,double,double,double);
+//double * hydroloops_euler_solver_twoFluid(double,double,double,double,double,double,double,double,double,double,double,double);
+
+//Declare function hydroloops_euler_solver_singleFluid of type double *
+double * hydroloops_euler_solver_singleFluid(struct state_st, double, double, double);
 
 #endif
