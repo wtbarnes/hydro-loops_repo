@@ -41,11 +41,14 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	double lambda;
 	double Eh;
 	double c2,c3,mean_T;
+	double f_old;
 	double *state_ptr;
 	
 	//Int
 	int i;
 	int t_flag = 0;
+	int interface_index;
+	int interface_flag = 0;
 	
 	//Structures
 	//Reserve memory for structure that will return loop parameters
@@ -128,6 +131,9 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		//Calculate the heating
 		Eh = hydroloops_heating(s,Eh0,inputs);
 		
+		//Set the old flux value to check where the TR-C interface occurs
+		f_old = F;
+		
 		//Update parameter state pointer
 		//state_ptr = hydroloops_euler_solver(Fe, Fi, Te, Ti, n, v, Pe, Pi, lambda, g, Eh, delta_s);
 		state_ptr = hydroloops_euler_solver_singleFluid(loop_state, lambda, Eh, delta_s);
@@ -138,6 +144,15 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		P = *(state_ptr + 4);
 		free(state_ptr);
 		state_ptr = NULL;
+		
+		//Check and see if we have come to the interface yet
+		if( (f_old - F) < 0 && interface_flag == 0)
+		{
+			//Set the interface index
+			interface_index = i;
+			//Raise the flag so that the index is not reset
+			interface_flag = 1;
+		}
 		
 		//Save updated parameters to data structure
 		loop_params->s[i] = s;
@@ -165,7 +180,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		//Calculate the EBTEL coefficients
 		mean_T = hydroloops_avg_val(loop_params->T,inputs.N);
 		c2 = mean_T/loop_params->T[inputs.N-1];
-		c3 = loop_params->T[0]/loop_params->T[inputs.N-1];
+		c3 = loop_params->T[interface_index]/loop_params->T[inputs.N-1];
 	
 		//Save these to the structure
 		loop_params->c2 = c2;
