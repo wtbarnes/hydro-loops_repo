@@ -8,4 +8,4 @@
 1.3e+8
 0.
 10.
-ion
+electron

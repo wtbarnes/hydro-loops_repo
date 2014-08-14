@@ -40,8 +40,10 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	double delta_s;
 	double lambda;
 	double Eh;
-	double c2,c3,mean_T;
+	double c1,c2,c3;
+	double R_tr_avg,R_c_avg,mean_T;
 	double f_old;
+	double tmp_rad;
 	double *state_ptr;
 	
 	//Int
@@ -60,6 +62,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	loop_params->r = malloc(sizeof(double[inputs.N]));
 	loop_params->g = malloc(sizeof(double[inputs.N]));
 	loop_params->h = malloc(sizeof(double[inputs.N]));
+	loop_params->lambda = malloc(sizeof(double[inputs.N]));
 	loop_params->v = malloc(sizeof(double[inputs.N]));
 	loop_params->F = malloc(sizeof(double[inputs.N]));
 	loop_params->T = malloc(sizeof(double[inputs.N]));
@@ -164,6 +167,7 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		loop_params->T[i] = T;
 		loop_params->n[i] = n;
 		loop_params->v[i] = v;
+		loop_params->lambda[i] = lambda;
 	}
 		
 	//Display some results
@@ -181,8 +185,32 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 		mean_T = hydroloops_avg_val(loop_params->T,inputs.N);
 		c2 = mean_T/loop_params->T[inputs.N-1];
 		c3 = loop_params->T[interface_index]/loop_params->T[inputs.N-1];
-	
+		
+		//Make the TR and coronal radiative loss arrays
+		double R_tr[interface_index + 1];
+		double R_c[inputs.N - interface_index - 1];
+		for(i = 0; i<inputs.N; i++)
+		{
+			tmp_rad = loop_params->lambda[i]*pow(loop_params->n[i],2);
+			if(i <= interface_index)
+			{
+				R_tr[i] = tmp_rad;
+			}
+			else
+			{
+				R_c[i] = tmp_rad;
+			}
+		}
+		
+		//Average the coronal and TR radiative losses
+		R_tr_avg = hydroloops_avg_val(R_tr,interface_index + 1);
+		R_c_avg = hydroloops_avg_val(R_c,inputs.N - interface_index - 1);
+		
+		//Compute the coefficient
+		c1 = R_tr_avg/R_c_avg;
+		
 		//Save these to the structure
+		loop_params->c1 = c1;
 		loop_params->c2 = c2;
 		loop_params->c3 = c3;
 	}
@@ -202,7 +230,7 @@ Function name: hydroloops_heating
 Description: This function computes the ad-hoc volumetric heating. 
 Inputs:
 	s: loop coordinate (cm)
-	Eh0: heating rate coefficient (erg cm^-3)
+	Eh0: heating rate coefficient (erg cm^-3 s^-1)
 	Options inputs: structure containing all information read in from input
 					file. See hydro-loops.h for layout.
 Outputs:
@@ -377,7 +405,7 @@ void hydroloops_print_data(struct hydroloops_st *loop_param, struct Options inpu
 	printf("The coefficient results were printed to the file %s\n",fn_out_coeff);
 	
 	//Print the data to the file
-	fprintf(out_file,"%f\n%f\n",loop_param->c2,loop_param->c3);
+	fprintf(out_file,"%f\n%f\n%f\n",loop_param->c1,loop_param->c2,loop_param->c3);
 	
 	//Close the file
 	fclose(out_file);
@@ -456,7 +484,10 @@ void hydroloops_free_struct(struct hydroloops_st *loop_param)
 	loop_param->T = NULL;
 	free(loop_param->P);
 	loop_param->P = NULL;
-	
+	free(loop_param->v);
+	loop_param->v = NULL;
+	free(loop_param->lambda);
+	loop_param->lambda = NULL;
 	free(loop_param->n);
 	loop_param->n = NULL;
 	free(loop_param->s);

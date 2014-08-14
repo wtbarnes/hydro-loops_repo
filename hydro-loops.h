@@ -40,12 +40,13 @@ struct hydroloops_st {
 	double *T;
 	double *P;
 	double *n;
+	double *lambda;
 	double *s;
 	double *r;
 	double *g;
 	double *h;
 	double *v;
-	double c2,c3;
+	double c1,c2,c3;
 	double flux_end;
 	double t_end;
 };
