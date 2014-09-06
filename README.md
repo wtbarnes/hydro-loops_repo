@@ -19,6 +19,7 @@ https://github.com/wtbarnes/hydro-loops_repo.git`) and then run `make` in the
 ### Configuring Input Parameters
 The input file is a simple text file `hydro-loops_parameters.txt`. The structure is as 
 follows:
+
 1. Number of grid cells
 2. Heating switch (0=uniform, 1=non-uniform)
 3. Radiative-loss switch (0=simple, 1=full)
@@ -28,10 +29,9 @@ follows:
 7. n0--density at loop base
 8. h0--height of loop base above the solar surface
 9. v0--velocity at loop base(v0=0 leads to solving the standard hydrostatic equations)
-10. Threshold value for _F(s=L)_ boundary condition (i.e. how close to zero will the 
-model 
-try to get)
+10. Threshold value for _F(s=L)_ boundary condition (i.e. how close to zero will the model try to get)
 11. species--electron or ion fluid
+
 Note that the loop half-length and heating scale-height (important only for non-uniform 
 heating) are set via command-line arguments. For example, to run the model for _L_=50 Mm 
 and _Sh_=100 Mm, one would run `./hydro-loops 50 100`.
