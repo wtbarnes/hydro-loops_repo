@@ -1,5 +1,4 @@
-hydro-loops
-===========
+#hydro-loops
 ## About
 The hydro-loops code computes hydrostatic solutions (i.e. _dt_=0) for coronal loops, 
 semi-stable (on the order of several hours) structures in the upper solar atmosphere 
@@ -13,7 +12,7 @@ flux _F(s)_, in particular _F(s=L)=0_ for a loop of half-length _L_. As of now, 
 equations are solved using a simple, non-adaptive Euler solver. 
 ## Compiling and Executing
 A `makefile` is included to compile the code into the executable `hydro-loops`. Download 
-the compressed-file or fork the repository (`git clone 
+the compressed file or fork the repository (`git clone 
 https://github.com/wtbarnes/hydro-loops_repo.git`) and then run `make` in the 
 `hydro-loops_repo' directory. 
 ### Configuring Input Parameters
