@@ -44,6 +44,8 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 	double R_tr_avg,R_c_avg,mean_T;
 	double f_old;
 	double tmp_rad;
+	double l_tr = 0.;
+	double l_c = 0.;
 	double *state_ptr;
 	
 	//Int
@@ -195,19 +197,21 @@ struct hydroloops_st *hydroloops_fconverge(double Eh0, struct Options inputs)
 			if(i <= interface_index)
 			{
 				R_tr[i] = tmp_rad;
+				//l_tr = l_tr + delta_s;
 			}
 			else
 			{
 				R_c[i] = tmp_rad;
+				//l_c = l_c + delta_s;
 			}
 		}
 		
 		//Average the coronal and TR radiative losses
-		R_tr_avg = hydroloops_avg_val(R_tr,interface_index + 1);
-		R_c_avg = hydroloops_avg_val(R_c,inputs.N - interface_index - 1);
+		R_tr_avg = hydroloops_avg_val(R_tr,interface_index+1);
+		R_c_avg = hydroloops_avg_val(R_c,inputs.N - interface_index-1);
 		
 		//Compute the coefficient
-		c1 = R_tr_avg/R_c_avg;
+		c1 = R_tr_avg/(R_c_avg);
 		
 		//Save these to the structure
 		loop_params->c1 = c1;
